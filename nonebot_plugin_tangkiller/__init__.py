@@ -32,35 +32,25 @@ path = Path(__file__).parent
 model = ultralytics.YOLO(path / "tang.pt")
 
 
-async def process_image(img: PILImage) -> list[PILImage] | PILImage:
-    """处理图片,将GIF转换为图片列表或返回单张图片"""
+async def process_image(img: PILImage) -> list[PILImage]:
+    """处理图片,将图片转换为图片列表"""
+    result = []
     if getattr(img, "is_animated", False):
-        frames = []
         for i in range(img.n_frames):
             img.seek(i)
             frame = img.convert("RGB")
-            frames.append(frame)
-        return frames
-    return img.convert("RGB")
+            result.append(frame)
+    else:
+        result.append(img.convert("RGB"))
+    return result
 
 
 async def detect_image(
-    image: list[PILImage] | PILImage, confidence_threshold: float = 0.95
+    image: list[PILImage], confidence_threshold: float = 0.95
 ) -> float | Literal[False]:
-    """检测图片是否包含目标对象"""
-    if isinstance(image, list):
-        # 处理GIF的每一帧
-        for frame in image:
-            results = model(frame)
-            if any(
-                result.probs.top1 == 1
-                and (top1conf := result.probs.top1conf.item()) >= confidence_threshold
-                for result in results
-            ):
-                return top1conf
-    else:
-        # 处理单张图片
-        results = model(image)
+    """检测图片是否包含目标对象，置信度高于confidence_threshold则返回置信度，否则返回False"""
+    for frame in image:
+        results = model(frame)
         if any(
             result.probs.top1 == 1
             and (top1conf := result.probs.top1conf.item()) >= confidence_threshold
@@ -81,23 +71,20 @@ async def _(bot: Bot, event: MessageEvent):
                     await msg.finish("图片下载失败", at_sender=True)
                     return
 
+            # 处理图片
             img = Image.open(BytesIO(res.content))
             processed_img = await process_image(img)
 
-            # 置信度大于0.95则认为是唐菲，可以根据需要调整
             if conf := await detect_image(processed_img, confidence_threshold):
-                # 是否撤回消息
+                # 是否撤回消息，撤回消息失败则不发送消息
                 if is_withdraw:
                     try:
                         await bot.delete_msg(message_id=event.message_id)
+                        return
                     except Exception:
-                        await msg.finish(
-                            MessageSegment.reply(event.message_id)
-                            + f"唐菲出现了, 可信度: {int(conf*100) }%"
-                        )
-                else:
-                    await msg.finish(
-                        MessageSegment.reply(event.message_id)
-                        + f"唐菲出现了, 可信度: {int(conf*100) }%"
-                    )
-                return
+                        pass
+
+                await msg.finish(
+                    MessageSegment.reply(event.message_id)
+                    + f"唐菲出现了, 可信度: {int(conf*100) }%"
+                )
