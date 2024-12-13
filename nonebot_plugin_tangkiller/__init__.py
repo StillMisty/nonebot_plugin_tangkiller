@@ -1,17 +1,31 @@
 from typing import Literal
 import httpx
-from nonebot import on_message
+from nonebot import get_plugin_config, on_message
 from nonebot.adapters.onebot.v11 import MessageEvent, Bot, MessageSegment
+from nonebot.plugin import PluginMetadata
 import ultralytics
 from PIL import Image
 from io import BytesIO
 from pathlib import Path
 from PIL.Image import Image as PILImage
 
+from .config import Config
+
+PluginMetadata(
+    name="nonebot_plugin_tangkiller",
+    description="检测唐菲图片",
+    usage="发送图片即可",
+    type="application",
+    homepage="https://github.com/StillMisty/nonebot_plugin_tangkiller",
+    supported_adapters=("~.onebot_v11",),
+    config=Config,
+)
+
 msg = on_message(priority=5, block=True)
 
 # 是否撤回消息
-is_withdraw = False
+is_withdraw = get_plugin_config(Config).tangkiller_is_withdraw
+confidence_threshold = get_plugin_config(Config).tangkiller_confidence_threshold
 
 # 加载模型
 path = Path(__file__).parent
@@ -40,7 +54,7 @@ async def detect_image(
             results = model(frame)
             if any(
                 result.probs.top1 == 1
-                and (top1conf := result.probs.top1conf.item()) > confidence_threshold
+                and (top1conf := result.probs.top1conf.item()) >= confidence_threshold
                 for result in results
             ):
                 return top1conf
@@ -49,7 +63,7 @@ async def detect_image(
         results = model(image)
         if any(
             result.probs.top1 == 1
-            and (top1conf := result.probs.top1conf.item()) > confidence_threshold
+            and (top1conf := result.probs.top1conf.item()) >= confidence_threshold
             for result in results
         ):
             return top1conf
@@ -71,10 +85,16 @@ async def _(bot: Bot, event: MessageEvent):
             processed_img = await process_image(img)
 
             # 置信度大于0.95则认为是唐菲，可以根据需要调整
-            if conf := await detect_image(processed_img):
+            if conf := await detect_image(processed_img, confidence_threshold):
                 # 是否撤回消息
                 if is_withdraw:
-                    await bot.delete_msg(message_id=event.message_id)
+                    try:
+                        await bot.delete_msg(message_id=event.message_id)
+                    except Exception:
+                        await msg.finish(
+                            MessageSegment.reply(event.message_id)
+                            + f"唐菲出现了, 可信度: {int(conf*100) }%"
+                        )
                 else:
                     await msg.finish(
                         MessageSegment.reply(event.message_id)
