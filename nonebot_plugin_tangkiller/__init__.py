@@ -1,4 +1,3 @@
-import ssl
 from nonebot import on_message
 from nonebot.adapters.onebot.v11 import MessageEvent, Bot, MessageSegment
 from nonebot.plugin import PluginMetadata
@@ -6,6 +5,7 @@ from nonebot.log import logger
 import ultralytics
 from typing import Literal
 import httpx
+import ssl
 from PIL import Image
 from PIL.Image import Image as PILImage
 from io import BytesIO
@@ -19,7 +19,7 @@ __plugin_meta__ = PluginMetadata(
     usage="发送图片即可",
     type="application",
     homepage="https://github.com/StillMisty/nonebot_plugin_tangkiller",
-    supported_adapters=("~onebot_v11",),
+    supported_adapters={"~onebot.v11"},
     config=Config,
 )
 
