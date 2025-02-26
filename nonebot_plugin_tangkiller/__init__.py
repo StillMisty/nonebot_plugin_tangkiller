@@ -9,11 +9,11 @@ from io import BytesIO
 from pathlib import Path
 from PIL.Image import Image as PILImage
 
-from .config import Config
+from .config import Config,config
 
 PluginMetadata(
     name="nonebot_plugin_tangkiller",
-    description="检测唐菲图片",
+    description="检测用户所发的唐菲图片",
     usage="发送图片即可",
     type="application",
     homepage="https://github.com/StillMisty/nonebot_plugin_tangkiller",

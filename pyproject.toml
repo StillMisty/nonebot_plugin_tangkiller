@@ -1,0 +1,22 @@
+[project]
+name = "nonebot-plugin-tangkiller"
+version = "0.1.0"
+description = "识别糖菲，横扫唐气，做回自己。"
+readme = "README.md"
+license.file = "LICENSE"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.28.1",
+    "nonebot-adapter-onebot>=2.4.6",
+    "pathlib>=1.0.1",
+    "pillow>=11.1.0",
+    "pydantic>=2.10.6",
+    "ultralytics>=8.3.79",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+Homepage = "https://github.com/StillMisty/nonebot_plugin_tangkiller"
