@@ -1,13 +1,13 @@
-from typing import Literal
-import httpx
-from nonebot import get_plugin_config, on_message
+from nonebot import on_message
 from nonebot.adapters.onebot.v11 import MessageEvent, Bot, MessageSegment
 from nonebot.plugin import PluginMetadata
 import ultralytics
+from typing import Literal
+import httpx
 from PIL import Image
+from PIL.Image import Image as PILImage
 from io import BytesIO
 from pathlib import Path
-from PIL.Image import Image as PILImage
 
 from .config import Config,config
 
@@ -24,8 +24,8 @@ PluginMetadata(
 msg = on_message(priority=5, block=True)
 
 # 是否撤回消息
-is_withdraw = get_plugin_config(Config).tangkiller_is_withdraw
-confidence_threshold = get_plugin_config(Config).tangkiller_confidence_threshold
+is_withdraw = config.tangkiller_is_withdraw
+confidence_threshold = config.tangkiller_confidence_threshold
 
 # 加载模型
 path = Path(__file__).parent
