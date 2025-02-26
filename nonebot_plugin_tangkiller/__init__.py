@@ -13,8 +13,8 @@ from pathlib import Path
 
 from .config import Config, config
 
-PluginMetadata(
-    name="nonebot_plugin_tangkiller",
+__plugin_meta__ = PluginMetadata(
+    name="唐菲检测",
     description="检测用户所发的唐菲图片",
     usage="发送图片即可",
     type="application",
