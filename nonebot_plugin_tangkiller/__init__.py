@@ -1,6 +1,8 @@
+import ssl
 from nonebot import on_message
 from nonebot.adapters.onebot.v11 import MessageEvent, Bot, MessageSegment
 from nonebot.plugin import PluginMetadata
+from nonebot.log import logger
 import ultralytics
 from typing import Literal
 import httpx
@@ -9,7 +11,7 @@ from PIL.Image import Image as PILImage
 from io import BytesIO
 from pathlib import Path
 
-from .config import Config,config
+from .config import Config, config
 
 PluginMetadata(
     name="nonebot_plugin_tangkiller",
@@ -26,6 +28,12 @@ msg = on_message(priority=5, block=True)
 # 是否撤回消息
 is_withdraw = config.tangkiller_is_withdraw
 confidence_threshold = config.tangkiller_confidence_threshold
+
+# 忽略ssl证书
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+ssl_context.set_ciphers("DEFAULT@SECLEVEL=2")
 
 # 加载模型
 path = Path(__file__).parent
@@ -65,26 +73,26 @@ async def _(bot: Bot, event: MessageEvent):
     for seg in event.message:
         if seg.type == "image":
             url = seg.data["url"]
-            async with httpx.AsyncClient(verify=False, timeout=10) as client:
-                res = await client.get(url)
-                if res.status_code != 200:
-                    await msg.finish("图片下载失败", at_sender=True)
+        async with httpx.AsyncClient(verify=ssl_context) as client:
+            res = await client.get(url)
+            if res.status_code != 200:
+                logger.error(f"请求图片失败, 状态码: {res.status_code}")
+                return
+
+        # 处理图片
+        img = Image.open(BytesIO(res.content))
+        processed_img = await process_image(img)
+
+        if conf := await detect_image(processed_img, confidence_threshold):
+            # 是否撤回消息，撤回消息失败则不发送消息
+            if is_withdraw:
+                try:
+                    await bot.delete_msg(message_id=event.message_id)
                     return
+                except Exception:
+                    pass
 
-            # 处理图片
-            img = Image.open(BytesIO(res.content))
-            processed_img = await process_image(img)
-
-            if conf := await detect_image(processed_img, confidence_threshold):
-                # 是否撤回消息，撤回消息失败则不发送消息
-                if is_withdraw:
-                    try:
-                        await bot.delete_msg(message_id=event.message_id)
-                        return
-                    except Exception:
-                        pass
-
-                await msg.finish(
-                    MessageSegment.reply(event.message_id)
-                    + f"唐菲出现了, 可信度: {int(conf*100) }%"
-                )
+            await msg.finish(
+                MessageSegment.reply(event.message_id)
+                + f"唐菲出现了, 可信度: {int(conf * 100)}%"
+            )
