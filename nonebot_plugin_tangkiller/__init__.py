@@ -19,7 +19,7 @@ __plugin_meta__ = PluginMetadata(
     usage="发送图片即可",
     type="application",
     homepage="https://github.com/StillMisty/nonebot_plugin_tangkiller",
-    supported_adapters=("~.onebot_v11",),
+    supported_adapters=("~onebot_v11",),
     config=Config,
 )
 
