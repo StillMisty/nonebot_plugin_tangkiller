@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-tangkiller"
-version = "0.1.7"
+version = "0.1.8"
 description = "识别糖菲，横扫唐气，做回自己。"
 readme = "README.md"
 license.file = "LICENSE"
