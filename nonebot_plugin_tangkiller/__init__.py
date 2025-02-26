@@ -71,28 +71,33 @@ async def detect_image(
 @msg.handle()
 async def _(bot: Bot, event: MessageEvent):
     for seg in event.message:
-        if seg.type == "image":
-            url = seg.data["url"]
-        async with httpx.AsyncClient(verify=ssl_context) as client:
-            res = await client.get(url)
-            if res.status_code != 200:
-                logger.error(f"请求图片失败, 状态码: {res.status_code}")
-                return
+        if seg.type != "image":
+            continue
 
-        # 处理图片
+        url = seg.data["url"]
+        try:
+            async with httpx.AsyncClient(verify=ssl_context) as client:
+                res = await client.get(url, timeout=10)
+                res.raise_for_status()
+        except Exception as e:
+            logger.warning(f"下载图片失败: {e}")
+            continue
+
         img = Image.open(BytesIO(res.content))
         processed_img = await process_image(img)
 
-        if conf := await detect_image(processed_img, confidence_threshold):
-            # 是否撤回消息，撤回消息失败则不发送消息
-            if is_withdraw:
-                try:
-                    await bot.delete_msg(message_id=event.message_id)
-                    return
-                except Exception:
-                    pass
+        if not (conf := await detect_image(processed_img, confidence_threshold)):
+            continue
 
-            await msg.finish(
-                MessageSegment.reply(event.message_id)
-                + f"唐菲出现了, 可信度: {int(conf * 100)}%"
-            )
+        if is_withdraw:
+            try:
+                await bot.delete_msg(message_id=event.message_id)
+                return
+            except Exception as e:
+                logger.warning(f"撤回图片失败: {e}")
+
+        reply = (
+            MessageSegment.reply(event.message_id)
+            + f"唐菲出现了, 可信度: {int(conf * 100)}%"
+        )
+        await msg.finish(reply)
